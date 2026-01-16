@@ -86,10 +86,21 @@ pub fn main() !void {
 }
 
 fn rayColor(ray: Ray) Color {
+    if (hitSphere(.{.z = -1.0 }, 0.5, &ray))
+        return .{ .x = 1.0 };
     const dir = ray.dir.norm();
     const a = 0.5 * (dir.y + 1.0);
     const blue = Color{.x = 0.5, .y = 0.7, .z = 1.0};
     return Color.white.scale(1.0 - a).add(blue.scale(a));
+}
+
+fn hitSphere(center: Point, radius: f32, ray: *const Ray) bool {
+    const oc = center.sub(ray.origin);
+    const a = ray.dir.dot(ray.dir);
+    const b = -2.0 * ray.dir.dot(oc);
+    const c = oc.dot(oc) - radius * radius;
+    const discriminant = b * b - 4.0 * a * c;
+    return discriminant >= 0;
 }
 
 fn writeColor(c: Color, pixels: []u8, off: usize) void {
