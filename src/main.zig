@@ -86,8 +86,10 @@ pub fn main() !void {
 }
 
 fn rayColor(ray: Ray) Color {
-    _ = ray;
-    return Color.black;
+    const dir = ray.dir.norm();
+    const a = 0.5 * (dir.y + 1.0);
+    const blue = Color{.x = 0.5, .y = 0.7, .z = 1.0};
+    return Color.white.scale(1.0 - a).add(blue.scale(a));
 }
 
 fn writeColor(c: Color, pixels: []u8, off: usize) void {

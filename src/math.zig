@@ -47,10 +47,10 @@ pub const Vec3 = packed struct {
     }
 
     pub fn len(self: Vec3) f32 {
-        return @sqrt(self.len_2());
+        return @sqrt(self.len2());
     }
 
-    pub fn len_2(self: Vec3) f32 {
+    pub fn len2(self: Vec3) f32 {
         return self.x * self.x + self.y * self.y + self.z * self.z;
     }
 
