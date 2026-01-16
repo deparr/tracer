@@ -15,7 +15,6 @@ pub fn main() !void {
 
     const image_width: u32 = 400;
     const image_widthf: f32 = @floatFromInt(image_width);
-    // calc image height with width and aspect
     var image_heightf: f32 = image_widthf / aspect_ratio;
     image_heightf = if (image_heightf < 1.0) 1.0 else image_heightf;
     const image_height: u32 = @intFromFloat(image_heightf);
@@ -38,16 +37,6 @@ pub fn main() !void {
     const pixel00_loc = viewport_upper_left.add(pixel_delta_u.add(pixel_delta_v).scale(0.5));
 
     // render an image
-
-    std.debug.print(
-        \\.{{
-        \\  .image_width = {d},
-        \\  .image_height = {d},
-        \\  .image_widthf = {d},
-        \\  .image_heightf = {d},
-        \\}}
-        \\
-        , .{ image_width, image_height, image_widthf, image_heightf });
 
     const pixels = try gpa.alloc(u8, image_height * image_width * 3);
     defer gpa.free(pixels);
@@ -86,21 +75,28 @@ pub fn main() !void {
 }
 
 fn rayColor(ray: Ray) Color {
-    if (hitSphere(.{.z = -1.0 }, 0.5, &ray))
-        return .{ .x = 1.0 };
+    const t = hitSphere(&.{ .z = -1.0 }, 0.5, &ray);
+    if (t > 0.0) {
+        // 
+        const N = ray.at(t).sub(.{ .z = -1.0 }).norm();
+        return N.add(Vec3.one).scale(0.5);
+    }
     const dir = ray.dir.norm();
     const a = 0.5 * (dir.y + 1.0);
-    const blue = Color{.x = 0.5, .y = 0.7, .z = 1.0};
+    const blue = Color{ .x = 0.5, .y = 0.7, .z = 1.0 };
     return Color.white.scale(1.0 - a).add(blue.scale(a));
 }
 
-fn hitSphere(center: Point, radius: f32, ray: *const Ray) bool {
+fn hitSphere(center: *const Point, radius: f32, ray: *const Ray) f32 {
     const oc = center.sub(ray.origin);
-    const a = ray.dir.dot(ray.dir);
-    const b = -2.0 * ray.dir.dot(oc);
-    const c = oc.dot(oc) - radius * radius;
-    const discriminant = b * b - 4.0 * a * c;
-    return discriminant >= 0;
+    const a = ray.dir.len2();
+    const h = ray.dir.dot(oc);
+    const c = oc.len2() - radius * radius;
+    const discriminant = h * h - a * c;
+    return if (discriminant < 0.0)
+        -1.0
+    else
+        (h - @sqrt(discriminant)) / a;
 }
 
 fn writeColor(c: Color, pixels: []u8, off: usize) void {
