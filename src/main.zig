@@ -5,6 +5,7 @@ const Point = math.Point;
 const Vec3 = math.Vec3;
 const Color = math.Color;
 const Ray = math.Ray;
+const rt = @import("rt.zig");
 
 const aspect_ratio = 16.0 / 9.0;
 
@@ -41,6 +42,11 @@ pub fn main() !void {
     const pixels = try gpa.alloc(u8, image_height * image_width * 3);
     defer gpa.free(pixels);
 
+    var world_buffer: [16]rt.Hittable = undefined;
+    var world = std.ArrayList(rt.Hittable).initBuffer(&world_buffer);
+    world.appendAssumeCapacity(.{ .sphere = .{ .center = .{ .z = -1.0 }, .radius = 0.5 } });
+    world.appendAssumeCapacity(.{ .sphere = .{ .center = .{ .y = -100.5, .z = -1.0 }, .radius = 100.0 } });
+
     for (0..image_height) |j| {
         const jf: f32 = @floatFromInt(j);
         for (0..image_width) |i| {
@@ -48,13 +54,13 @@ pub fn main() !void {
             const pixel_center = pixel00_loc
                 .add(pixel_delta_u.scale(i_f))
                 .add(pixel_delta_v.scale(jf));
-            const ray_dir = pixel_center.sub(camera_center);
-            const pixel_color = rayColor(Ray{
-                .origin = camera_center,
-                .dir = ray_dir,
-            });
-            const off = j * image_width * 3 + i * 3;
 
+            const ray_dir = pixel_center.sub(camera_center);
+            const ray = Ray{ .origin = camera_center, .dir = ray_dir };
+
+            const pixel_color = rayColor(ray, .{ .multi = world.items });
+
+            const off = j * image_width * 3 + i * 3;
             writeColor(pixel_color, pixels, off);
         }
     }
@@ -74,29 +80,15 @@ pub fn main() !void {
     try writer.interface.flush();
 }
 
-fn rayColor(ray: Ray) Color {
-    const t = hitSphere(&.{ .z = -1.0 }, 0.5, &ray);
-    if (t > 0.0) {
-        // 
-        const N = ray.at(t).sub(.{ .z = -1.0 }).norm();
-        return N.add(Vec3.one).scale(0.5);
+fn rayColor(ray: Ray, world: rt.Hittable) Color {
+    if (world.hit(&ray, 0.0, math.inf)) |rec| {
+        return rec.normal.add(Color.white).scale(0.5);
     }
+    // if we dont hit anything, return the blue gradient
     const dir = ray.dir.norm();
     const a = 0.5 * (dir.y + 1.0);
     const blue = Color{ .x = 0.5, .y = 0.7, .z = 1.0 };
     return Color.white.scale(1.0 - a).add(blue.scale(a));
-}
-
-fn hitSphere(center: *const Point, radius: f32, ray: *const Ray) f32 {
-    const oc = center.sub(ray.origin);
-    const a = ray.dir.len2();
-    const h = ray.dir.dot(oc);
-    const c = oc.len2() - radius * radius;
-    const discriminant = h * h - a * c;
-    return if (discriminant < 0.0)
-        -1.0
-    else
-        (h - @sqrt(discriminant)) / a;
 }
 
 fn writeColor(c: Color, pixels: []u8, off: usize) void {

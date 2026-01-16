@@ -1,3 +1,16 @@
+const stdmath = @import("std").math;
+
+pub const inf = stdmath.inf(f32);
+pub const pi: f32 = stdmath.pi;
+
+pub fn deg_to_rad(deg: f32) f32 {
+    return deg * pi / 180.0;
+}
+
+pub fn rad_to_deg(rad: f32) f32 {
+    return rad * 180 / pi;
+}
+
 pub const Vec3 = packed struct {
     x: f32 = 0.0,
     y: f32 = 0.0,
@@ -40,10 +53,16 @@ pub const Vec3 = packed struct {
         };
     }
 
-    pub fn neg(self: *Vec3) void {
-        self.x = -self.x;
-        self.y = -self.y;
-        self.z = -self.z;
+    pub fn divScalar(self: Vec3, scalar: f32) Vec3 {
+        return self.scale(1.0 / scalar);
+    }
+
+    pub fn neg(self: Vec3) Vec3 {
+        return .{
+            .x = -self.x,
+            .y = -self.y,
+            .z = -self.z,
+        };
     }
 
     pub fn len(self: Vec3) f32 {
@@ -69,7 +88,6 @@ pub const Vec3 = packed struct {
             .z = self.x * other.y - self.y * other.x,
         };
     }
-
 };
 pub const Point = Vec3;
 pub const Color = Vec3;
