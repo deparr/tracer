@@ -5,13 +5,13 @@ const Vec3 = math.Vec3;
 const Ray = math.Ray;
 
 pub const Hittable = union(enum) {
-    sphere: struct { center: Point, radius: f32 },
+    sphere: struct { center: Point, radius: f64 },
     multi: []const Hittable,
 
     pub const HitRecord = struct {
         point: Point = Point.zero,
         normal: Vec3 = Vec3.zero,
-        t: f32 = 0.0,
+        t: f64 = 0.0,
         front_face: bool = false,
 
         pub fn setFaceNormal(self: *HitRecord, ray: *const Ray, outward_normal: *const Vec3) void {
