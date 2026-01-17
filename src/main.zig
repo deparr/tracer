@@ -14,7 +14,13 @@ pub fn main() !void {
     defer _ = debug_allocator.deinit();
     var gpa = debug_allocator.allocator();
 
-    var camera = Camera.initOptions(.{ .image_width = 1920, .samples_per_pixel = 100 });
+    const args = try std.process.argsAlloc(gpa);
+    defer std.process.argsFree(gpa, args);
+
+    const image_width = if (args.len > 1) std.fmt.parseInt(u32, args[1], 10) catch 600 else 600;
+    const samples_per_pixel = if (args.len > 2) std.fmt.parseInt(u16, args[2], 10) catch 100 else 100;
+
+    var camera = Camera.initOptions(.{ .image_width = image_width, .samples_per_pixel = samples_per_pixel });
     const pixels = try gpa.alloc(u8, camera.image_height * camera.image_width * 3);
     defer gpa.free(pixels);
 
