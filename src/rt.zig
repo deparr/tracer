@@ -20,7 +20,7 @@ pub const Hittable = union(enum) {
         }
     };
 
-    pub fn hit(self: Hittable, ray: *const Ray, ray_tmin: f32, ray_tmax: f32) ?HitRecord {
+    pub fn hit(self: Hittable, ray: *const Ray, range: math.Range) ?HitRecord {
         switch (self) {
             .sphere => |s| {
                 const oc = s.center.sub(ray.origin);
@@ -33,9 +33,9 @@ pub const Hittable = union(enum) {
                 const sqrtd = @sqrt(discriminant);
                 const root = blk: {
                     const neg = (h - sqrtd) / a;
-                    if (neg > ray_tmin and neg < ray_tmax) break :blk neg;
+                    if (range.surrounds(neg)) break :blk neg;
                     const pos = (h + sqrtd) / a;
-                    if (pos > ray_tmin and pos < ray_tmax) break :blk pos;
+                    if (range.surrounds(pos)) break :blk pos;
                     return null;
                 };
 
@@ -51,11 +51,11 @@ pub const Hittable = union(enum) {
             },
             .multi => |list| {
                 var record: ?HitRecord = null;
-                var closest: f32 = ray_tmax;
+                var closest_range = range;
                 for (list) |obj| {
-                    if (obj.hit(ray, ray_tmin, closest)) |obj_record| {
+                    if (obj.hit(ray, closest_range)) |obj_record| {
                         record = obj_record;
-                        closest = obj_record.t;
+                        closest_range.max = obj_record.t;
                     }
                 }
                 return record;

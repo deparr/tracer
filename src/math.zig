@@ -100,3 +100,24 @@ pub const Ray = struct {
         return self.origin.add(self.dir.scale(t));
     }
 };
+
+pub const Range = packed struct {
+    min: f32 = 0.0,
+    max: f32 = 0.0,
+
+    pub const empty = Range{ .min = inf, .max = -inf };
+    pub const universe = Range{ .min = -inf, .max = inf };
+    pub const forward = Range{ .min = 0.0, .max = inf };
+
+    pub fn size(self: Range) f32 {
+        return self.max - self.min;
+    }
+
+    pub fn contains(self: Range, x: f32) bool {
+        return self.min <= x and x <= self.max;
+    }
+
+    pub fn surrounds(self: Range, x: f32) bool {
+        return self.min < x and x < self.max;
+    }
+};
