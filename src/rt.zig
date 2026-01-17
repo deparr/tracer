@@ -116,19 +116,19 @@ pub const Material = struct {
                 return .{ .dir = scattered_ray, .attenuation = self.albedo };
             },
             .dielectric => {
+                // full refranctace
                 const ri = if (rec.front_face) 1.0 / self.refraction_index else self.refraction_index;
                 var dir = incident.dir.norm();
                 const cos_theta = @min(dir.neg().dot(rec.normal), 1.0);
                 const sin_theta = @sqrt(1.0 - cos_theta * cos_theta);
                 const cannot_refract = ri * sin_theta > 1.0 or reflectance(cos_theta, ri) > rng.next_f64();
-                if (cannot_refract){
+                if (cannot_refract) {
                     dir = dir.reflect(rec.normal);
-                }
-                else {
+                } else {
                     dir = dir.refract(rec.normal, ri);
                 }
-                const ray = Ray{ .origin = rec.point, .dir = dir };
-                return .{ .dir = ray, .attenuation = Color.white };
+                const scattered_ray = Ray{ .origin = rec.point, .dir = dir };
+                return .{ .dir = scattered_ray, .attenuation = Color.white };
             },
             else => return null,
         }

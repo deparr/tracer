@@ -186,7 +186,7 @@ pub const Vec3 = packed struct {
     pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f64) Vec3 {
         const cos_theta = @min(uv.neg().dot(n), 1.0);
         const r_out_perp = uv.add(n.scale(cos_theta)).scale(etai_over_etat);
-        const r_out_para = n.scale(@sqrt(@abs(1.0 - r_out_perp.len2())));
+        const r_out_para = n.scale(-@sqrt(@abs(1.0 - r_out_perp.len2())));
         return r_out_perp.add(r_out_para);
     }
 };
