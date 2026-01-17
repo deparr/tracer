@@ -1,5 +1,0 @@
-.{
-    .image_width = 600,
-    .samples_per_pixel = 100,
-    .max_depth = 50,
-}

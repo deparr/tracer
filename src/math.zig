@@ -182,6 +182,13 @@ pub const Vec3 = packed struct {
     pub fn reflect(self: Vec3, n: Vec3) Vec3 {
         return self.sub(n.scale(2.0 * self.dot(n)));
     }
+
+    pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f64) Vec3 {
+        const cos_theta = @min(uv.neg().dot(n), 1.0);
+        const r_out_perp = uv.add(n.scale(cos_theta)).scale(etai_over_etat);
+        const r_out_para = n.scale(@sqrt(@abs(1.0 - r_out_perp.len2())));
+        return r_out_perp.add(r_out_para);
+    }
 };
 pub const Point = Vec3;
 pub const Color = Vec3;

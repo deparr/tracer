@@ -6,7 +6,8 @@ const Ray = math.Ray;
 const Color = math.Color;
 
 pub const Hittable = union(enum) {
-    sphere: struct { center: Point, radius: f64, mat: Material.Index = .none },
+    // https://ziggit.dev/t/is-it-possible-to-use-non-exhaustive-enums-in-zon/13847/16
+    sphere: struct { center: Point, radius: f64, mat: u32 = 0 },
     multi: []const Hittable,
 
     pub const HitRecord = struct {
@@ -46,7 +47,7 @@ pub const Hittable = union(enum) {
                 var record = HitRecord{
                     .point = surface_point,
                     .t = root,
-                    .mat = s.mat,
+                    .mat = @enumFromInt(s.mat),
                 };
                 record.setFaceNormal(ray, &outward_normal);
 
@@ -70,11 +71,14 @@ pub const Hittable = union(enum) {
 pub const Material = struct {
     tag: Tag,
     albedo: Color = .{},
+    fuzz: f64 = 1.0,
+    refraction_index: f64 = 1.0,
 
     pub const Tag = enum {
         none,
         lambertian,
         metal,
+        dielectric,
     };
 
     pub const Index = enum(u32) {
@@ -105,11 +109,41 @@ pub const Material = struct {
                 return .{ .dir = scattered_ray, .attenuation = self.albedo };
             },
             .metal => {
-                const reflected = incident.dir.reflect(rec.normal);
+                const fuzz = @min(self.fuzz, 1.0);
+                var reflected = incident.dir.reflect(rec.normal);
+                reflected = reflected.norm().add(rng.next_norm_vec3().scale(fuzz));
                 const scattered_ray = Ray{ .origin = rec.point, .dir = reflected };
                 return .{ .dir = scattered_ray, .attenuation = self.albedo };
+            },
+            .dielectric => {
+                const ri = if (rec.front_face) 1.0 / self.refraction_index else self.refraction_index;
+                var dir = incident.dir.norm();
+                const cos_theta = @min(dir.neg().dot(rec.normal), 1.0);
+                const sin_theta = @sqrt(1.0 - cos_theta * cos_theta);
+                const cannot_refract = ri * sin_theta > 1.0 or reflectance(cos_theta, ri) > rng.next_f64();
+                if (cannot_refract){
+                    dir = dir.reflect(rec.normal);
+                }
+                else {
+                    dir = dir.refract(rec.normal, ri);
+                }
+                const ray = Ray{ .origin = rec.point, .dir = dir };
+                return .{ .dir = ray, .attenuation = Color.white };
             },
             else => return null,
         }
     }
+
+    fn reflectance(cos: f64, refraction_index: f64) f64 {
+        // schlick aproximation
+        var r0 = (1 - refraction_index) / (1 + refraction_index);
+        r0 *= r0;
+        return r0 + (1 - r0) * std.math.pow(f64, 1 - cos, 5);
+    }
+};
+
+pub const World = struct {
+    camera_options: @import("Camera.zig").Options,
+    materials: []Material,
+    objects: []Hittable,
 };
