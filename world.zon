@@ -3,22 +3,29 @@
         .image_width = 600,
         .samples_per_pixel = 100,
         .max_depth = 50,
+        .vfov = 20,
+        .look_from = .{ .x = -2, .y = 2, .z = 1 },
+        .look_at = .{ .z = -1 },
+        .view_up = .{ .y = 1 },
     },
 
     .materials = .{
         .{ .tag = .none },
-        .{ .tag = .lambertian, .albedo = .{ .x = 0.8, .y = 0.8, .z = 0.0 } }, // ground
-        .{ .tag = .lambertian, .albedo = .{ .x = 0.1, .y = 0.2, .z = 0.5 } }, // center
-        .{ .tag = .dielectric, .refraction_index = 1.5 }, // left
-        .{ .tag = .metal, .albedo = .{ .x = 0.8, .y = 0.6, .z = 0.2 } }, // right
-        .{ .tag = .dielectric, .refraction_index = 0.66666666666667 }, // bubble
+        .{ .tag = .lambertian, .albedo = .{ .x = 0.8, .y = 0.8, .z = 0.0 } }, // ground 1
+        .{ .tag = .lambertian, .albedo = .{ .x = 0.1, .y = 0.2, .z = 0.5 } }, // center 2
+        .{ .tag = .dielectric, .refraction_index = 1.5 }, // left 3
+        .{ .tag = .metal, .albedo = .{ .x = 0.8, .y = 0.6, .z = 0.2 } }, // right 4
+        .{ .tag = .dielectric, .refraction_index = 0.66666666666667 }, // bubble 5
+        .{ .tag = .metal, .albedo = .{ .x = 0.8, .y = 0.8, .z = 0.8 }, .fuzz = 0.0 }, // left metal 6
+        .{ .tag = .lambertian, .albedo = .{ .x = 1.0 } }, // red 7
+        .{ .tag = .lambertian, .albedo = .{ .z = 1.0 } }, // blue 8
     },
 
     .objects = .{
-        .{ .sphere = .{ .center = .{ .x = -1.0, .z = -1.0 }, .radius = 0.5, .mat = 3 } },
-        .{ .sphere = .{ .center = .{ .x = -1.0, .z = -1.0 }, .radius = 0.4, .mat = 5 } },
-        .{ .sphere = .{ .center = .{ .z = -1.2 }, .radius = 0.5, .mat = 2 } },
-        .{ .sphere = .{ .center = .{ .x = 1.0, .z = -1.0 }, .radius = 0.5, .mat = 4 } },
-        .{ .sphere = .{ .center = .{ .y = -100.5, .z = -1.0 }, .radius = 100.0, .mat = 1 } },
+        .{ .sphere = .{ .center = .{ .x = -1.0, .z = -1.0 }, .radius = 0.5, .mat = 3 } }, // left
+        .{ .sphere = .{ .center = .{ .x = -1.0, .z = -1.0 }, .radius = 0.4, .mat = 5 } }, // left air bubble
+        .{ .sphere = .{ .center = .{ .z = -1.2 }, .radius = 0.5, .mat = 2 } }, // center
+        .{ .sphere = .{ .center = .{ .x = 1.0, .z = -1.0 }, .radius = 0.5, .mat = 4 } }, // right
+        .{ .sphere = .{ .center = .{ .y = -100.5, .z = -1.0 }, .radius = 100.0, .mat = 1 } }, // ground
     },
 }

@@ -26,12 +26,12 @@ pub fn main() !void {
     const pixels = try gpa.alloc(u8, camera.image_height * camera.image_width * 3);
     defer gpa.free(pixels);
 
-    const progress = std.Progress.start(.{ .estimated_total_items = 1 });
-    const scanlines = progress.start("scanlines", camera.image_height);
+    const root = std.Progress.start(.{ .estimated_total_items = 1 });
+    const scanlines = root.start("scanlines", camera.image_height);
 
     camera.render(.{ .multi = world.objects }, pixels, scanlines);
     scanlines.end();
-    progress.end();
+    root.end();
 
     // really need a streaming api on zig-qoi
     const qoi_img = try qoi.encode(gpa, pixels, .{

@@ -5,6 +5,10 @@ pub const Options = struct {
     aspect_ratio: f64 = 16.0 / 9.0,
     max_depth: u32 = 10,
     samples_per_pixel: u16 = 10,
+    vfov: f64 = 90.0,
+    look_from: Vec3 = .{},
+    look_at: Vec3 = .{ .z = -1.0 },
+    view_up: Vec3 = .{ .y = 1.0 },
 };
 
 aspect_ratio: f64,
@@ -17,7 +21,11 @@ pixel_delta_v: Vec3,
 stride: u32,
 sample_scale: f64,
 samples_per_pixel: u16,
+vfov: f64,
 max_depth: u32,
+u: Vec3,
+v: Vec3,
+w: Vec3,
 materials: []const rt.Material,
 rng: math.Random,
 
@@ -27,20 +35,27 @@ pub fn initOptions(opts: Options) Camera {
     const image_height: f64 = @max(1.0, widthf / opts.aspect_ratio);
 
     // viewport dimensions
-    const focal_length: f64 = 1.0;
-    const viewport_height: f64 = 2.0;
+    const focal_length: f64 = opts.look_from.sub(opts.look_at).len();
+    const theta = math.deg_to_rad(opts.vfov);
+    const h = @tan(theta / 2);
+    const viewport_height: f64 = 2.0 * h * focal_length;
     const viewport_width = viewport_height * widthf / image_height;
 
+    // basis vectors
+    const w = opts.look_from.sub(opts.look_at).norm();
+    const u = opts.view_up.cross(w).norm();
+    const v = w.cross(u);
+
     // vectors across the horizontal and vertical edges
-    const viewport_u = Vec3{ .x = viewport_width };
-    const viewport_v = Vec3{ .y = -viewport_height };
+    const viewport_u = u.scale(viewport_width);
+    const viewport_v = v.neg().scale(viewport_height);
 
     // delta from pixel to pixel
     const pixel_delta_u = viewport_u.divScalar(@floatFromInt(opts.image_width));
     const pixel_delta_v = viewport_v.divScalar(image_height);
 
-    var viewport_upper_left = Vec3{ .z = -focal_length };
-    viewport_upper_left = viewport_upper_left
+    var viewport_upper_left = opts.look_from
+        .sub(w.scale(focal_length))
         .sub(viewport_u.scale(0.5))
         .sub(viewport_v.scale(0.5));
 
@@ -48,14 +63,18 @@ pub fn initOptions(opts: Options) Camera {
         .aspect_ratio = opts.aspect_ratio,
         .image_width = opts.image_width,
         .image_height = @intFromFloat(image_height),
-        .center = Vec3.zero,
+        .center = opts.look_from,
         .pixel00_loc = viewport_upper_left.add(pixel_delta_u.add(pixel_delta_v).scale(0.5)),
         .pixel_delta_u = pixel_delta_u,
         .pixel_delta_v = pixel_delta_v,
         .stride = opts.image_width * 3,
         .samples_per_pixel = opts.samples_per_pixel,
         .sample_scale = 1.0 / @as(f64, @floatFromInt(opts.samples_per_pixel)),
+        .vfov = theta,
         .max_depth = @max(opts.max_depth, 1),
+        .u = u,
+        .v = v,
+        .w = w,
         .materials = &.{},
         .rng = .init(0xdeadcafe),
     };
