@@ -1,9 +1,10 @@
 pub const Camera = @This();
 
-pub const CameraOptions = struct {
+pub const Options = struct {
     image_width: u32,
     aspect_ratio: f64 = 16.0 / 9.0,
-    samples_per_pixel: u16 = 100,
+    max_depth: u32 = 10,
+    samples_per_pixel: u16 = 10,
 };
 
 aspect_ratio: f64,
@@ -16,10 +17,11 @@ pixel_delta_v: Vec3,
 stride: u32,
 sample_scale: f64,
 samples_per_pixel: u16,
+max_depth: u32,
 rng: math.Random,
 
 // todo if this needs more opts, create an options struct
-pub fn initOptions(opts: CameraOptions) Camera {
+pub fn initOptions(opts: Options) Camera {
     const widthf: f64 = @floatFromInt(opts.image_width);
     const image_height: f64 = @max(1.0, widthf / opts.aspect_ratio);
 
@@ -52,6 +54,7 @@ pub fn initOptions(opts: CameraOptions) Camera {
         .stride = opts.image_width * 3,
         .samples_per_pixel = opts.samples_per_pixel,
         .sample_scale = 1.0 / @as(f64, @floatFromInt(opts.samples_per_pixel)),
+        .max_depth = @max(opts.max_depth, 1),
         .rng = .init(0xdeadcafe),
     };
 }
@@ -63,7 +66,7 @@ pub fn render(self: *Camera, world: Hittable, pixels: []u8, progress: std.Progre
             var pixel_color = Color.black;
             for (0..self.samples_per_pixel) |_| {
                 const ray = self.getRay(i, j);
-                pixel_color.addAssign(rayColor(ray, &world));
+                pixel_color.addAssign(self.rayColor(ray, &world, self.max_depth));
             }
             pixel_color.scaleAssign(self.sample_scale);
             const offset = row_offset + i * 3;
@@ -87,9 +90,14 @@ fn getRay(self: *Camera, i_int: usize, j_int: usize) Ray {
     return Ray{ .origin = self.center, .dir = pixel_sample.sub(self.center) };
 }
 
-fn rayColor(ray: Ray, world: *const Hittable) Color {
+fn rayColor(self: *Camera, ray: Ray, world: *const Hittable, depth: u32) Color {
+    if (depth == 0) return Color.black;
+
     if (world.hit(&ray, .forward)) |rec| {
-        return rec.normal.add(Color.white).scale(0.5);
+        const dir = self.rng.next_vec3_on_hemisphere(rec.normal);
+        const bounced_ray = Ray{.origin = rec.point, .dir = dir };
+        return self.rayColor(bounced_ray, world, depth - 1).scale(0.5);
+        // return rec.normal.add(Color.white).scale(0.5);
     }
     // if we dont hit anything, return the blue gradient
     const dir = ray.dir.norm();

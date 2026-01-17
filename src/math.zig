@@ -192,7 +192,7 @@ pub const Range = packed struct {
 
     pub const empty = Range{ .min = inf, .max = -inf };
     pub const universe = Range{ .min = -inf, .max = inf };
-    pub const forward = Range{ .min = 0.0, .max = inf };
+    pub const forward = Range{ .min = 0.001, .max = inf };
 
     pub fn size(self: Range) f64 {
         return self.max - self.min;
