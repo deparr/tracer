@@ -173,6 +173,15 @@ pub const Vec3 = packed struct {
             .z = self.x * other.y - self.y * other.x,
         };
     }
+
+    pub fn nearZero(self: Vec3) bool {
+        const e = 1e-8;
+        return @abs(self.x) < e and @abs(self.y) < e and @abs(self.z) < e;
+    }
+
+    pub fn reflect(self: Vec3, n: Vec3) Vec3 {
+        return self.sub(n.scale(2.0 * self.dot(n)));
+    }
 };
 pub const Point = Vec3;
 pub const Color = Vec3;

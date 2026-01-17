@@ -18,6 +18,7 @@ stride: u32,
 sample_scale: f64,
 samples_per_pixel: u16,
 max_depth: u32,
+materials: []const rt.Material,
 rng: math.Random,
 
 // todo if this needs more opts, create an options struct
@@ -55,11 +56,12 @@ pub fn initOptions(opts: Options) Camera {
         .samples_per_pixel = opts.samples_per_pixel,
         .sample_scale = 1.0 / @as(f64, @floatFromInt(opts.samples_per_pixel)),
         .max_depth = @max(opts.max_depth, 1),
+        .materials = &.{},
         .rng = .init(0xdeadcafe),
     };
 }
 
-pub fn render(self: *Camera, world: Hittable, pixels: []u8, progress: std.Progress.Node) void {
+pub fn render(self: *Camera, world: rt.Hittable, pixels: []u8, progress: std.Progress.Node) void {
     for (0..self.image_height) |j| {
         const row_offset = j * self.stride;
         for (0..self.image_width) |i| {
@@ -90,14 +92,14 @@ fn getRay(self: *Camera, i_int: usize, j_int: usize) Ray {
     return Ray{ .origin = self.center, .dir = pixel_sample.sub(self.center) };
 }
 
-fn rayColor(self: *Camera, ray: Ray, world: *const Hittable, depth: u32) Color {
+fn rayColor(self: *Camera, ray: Ray, world: *const rt.Hittable, depth: u32) Color {
     if (depth == 0) return Color.black;
 
     if (world.hit(&ray, .forward)) |rec| {
-        const dir = self.rng.next_vec3_on_hemisphere(rec.normal);
-        const bounced_ray = Ray{.origin = rec.point, .dir = dir };
-        return self.rayColor(bounced_ray, world, depth - 1).scale(0.5);
-        // return rec.normal.add(Color.white).scale(0.5);
+        if (self.materials[@intFromEnum(rec.mat)].scatter(&self.rng, ray, &rec)) |scatter_rec| {
+            return scatter_rec.attenuation.mul(self.rayColor(scatter_rec.dir, world, depth - 1));
+        }
+        return Color.black;
     }
     // if we dont hit anything, return the blue gradient
     const dir = ray.dir.norm();
@@ -108,9 +110,21 @@ fn rayColor(self: *Camera, ray: Ray, world: *const Hittable, depth: u32) Color {
 
 fn writePixel(c: Color, pixels: []u8, off: usize) void {
     const intensity = Range{ .max = 0.9999 };
-    pixels[off] = @intFromFloat(256 * intensity.clamp(c.x));
-    pixels[off + 1] = @intFromFloat(256 * intensity.clamp(c.y));
-    pixels[off + 2] = @intFromFloat(256 * intensity.clamp(c.z));
+    var r = c.x;
+    var g = c.y;
+    var b = c.z;
+    r = linearToGamma(r);
+    g = linearToGamma(g);
+    b = linearToGamma(b);
+
+    pixels[off] = @intFromFloat(256 * intensity.clamp(r));
+    pixels[off + 1] = @intFromFloat(256 * intensity.clamp(g));
+    pixels[off + 2] = @intFromFloat(256 * intensity.clamp(b));
+}
+
+inline fn linearToGamma(v: f64) f64 {
+    if (v > 0.0) return @sqrt(v);
+    return 0.0;
 }
 
 const std = @import("std");
@@ -120,4 +134,4 @@ const Vec3 = math.Vec3;
 const Point = math.Point;
 const Range = math.Range;
 const Ray = math.Ray;
-const Hittable = @import("rt.zig").Hittable;
+const rt = @import("rt.zig");

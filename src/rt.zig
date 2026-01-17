@@ -3,9 +3,10 @@ const math = @import("math.zig");
 const Point = math.Point;
 const Vec3 = math.Vec3;
 const Ray = math.Ray;
+const Color = math.Color;
 
 pub const Hittable = union(enum) {
-    sphere: struct { center: Point, radius: f64 },
+    sphere: struct { center: Point, radius: f64, mat: Material.Index = .none },
     multi: []const Hittable,
 
     pub const HitRecord = struct {
@@ -13,6 +14,7 @@ pub const Hittable = union(enum) {
         normal: Vec3 = Vec3.zero,
         t: f64 = 0.0,
         front_face: bool = false,
+        mat: Material.Index,
 
         pub fn setFaceNormal(self: *HitRecord, ray: *const Ray, outward_normal: *const Vec3) void {
             self.front_face = ray.dir.dot(outward_normal.*) < 0.0;
@@ -44,6 +46,7 @@ pub const Hittable = union(enum) {
                 var record = HitRecord{
                     .point = surface_point,
                     .t = root,
+                    .mat = s.mat,
                 };
                 record.setFaceNormal(ray, &outward_normal);
 
@@ -60,6 +63,53 @@ pub const Hittable = union(enum) {
                 }
                 return record;
             },
+        }
+    }
+};
+
+pub const Material = struct {
+    tag: Tag,
+    albedo: Color = .{},
+
+    pub const Tag = enum {
+        none,
+        lambertian,
+        metal,
+    };
+
+    pub const Index = enum(u32) {
+        none = 0,
+        _,
+
+        pub fn toInt(self: Index) u32 {
+            return @intFromEnum(self);
+        }
+
+        pub fn fromInt(val: u32) Index {
+            return @enumFromInt(val);
+        }
+    };
+
+    pub const ScatterRecord = struct {
+        dir: Ray,
+        attenuation: Color,
+    };
+
+    pub fn scatter(self: *const Material, rng: *math.Random, incident: Ray, rec: *const Hittable.HitRecord) ?ScatterRecord {
+        switch (self.tag) {
+            .lambertian => {
+                var scatter_dir = rec.normal.add(rng.next_norm_vec3());
+                if (scatter_dir.nearZero())
+                    scatter_dir = rec.normal;
+                const scattered_ray = Ray{ .origin = rec.point, .dir = scatter_dir };
+                return .{ .dir = scattered_ray, .attenuation = self.albedo };
+            },
+            .metal => {
+                const reflected = incident.dir.reflect(rec.normal);
+                const scattered_ray = Ray{ .origin = rec.point, .dir = reflected };
+                return .{ .dir = scattered_ray, .attenuation = self.albedo };
+            },
+            else => return null,
         }
     }
 };
