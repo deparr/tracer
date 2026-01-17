@@ -9,14 +9,12 @@ const Range = math.Range;
 const rt = @import("rt.zig");
 const Camera = @import("Camera.zig");
 
-const aspect_ratio = 16.0 / 9.0;
-
 pub fn main() !void {
     var debug_allocator = std.heap.DebugAllocator(.{}).init;
     defer _ = debug_allocator.deinit();
     var gpa = debug_allocator.allocator();
 
-    const camera = Camera.initFromWidthAndAspect(400, aspect_ratio);
+    var camera = Camera.initOptions(.{ .image_width = 1920, .samples_per_pixel = 100 });
     const pixels = try gpa.alloc(u8, camera.image_height * camera.image_width * 3);
     defer gpa.free(pixels);
 
@@ -25,8 +23,14 @@ pub fn main() !void {
     world.appendAssumeCapacity(.{ .sphere = .{ .center = .{ .z = -1.0 }, .radius = 0.5 } });
     world.appendAssumeCapacity(.{ .sphere = .{ .center = .{ .y = -100.5, .z = -1.0 }, .radius = 100.0 } });
 
-    camera.render(.{ .multi = world.items }, pixels);
+    const progress = std.Progress.start(.{ .estimated_total_items = 1 });
+    const scanlines = progress.start("scanlines", camera.image_height);
 
+    camera.render(.{ .multi = world.items }, pixels, scanlines);
+    scanlines.end();
+    progress.end();
+
+    // really need a streaming api on zig-qoi
     const qoi_img = try qoi.encode(gpa, pixels, .{
         .width = camera.image_width,
         .height = camera.image_height,
