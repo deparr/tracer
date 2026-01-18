@@ -1,21 +1,17 @@
 const std = @import("std");
 const qoi = @import("qoi");
-const math = @import("math.zig");
-const Point = math.Point;
-const Vec3 = math.Vec3;
-const Color = math.Color;
-const Ray = math.Ray;
-const Range = math.Range;
 const Camera = @import("Camera.zig");
 const rt = @import("rt.zig");
-const Material = rt.Material;
 
 pub fn main() !void {
     var debug_allocator = std.heap.DebugAllocator(.{}).init;
     defer _ = debug_allocator.deinit();
     var gpa = debug_allocator.allocator();
 
-    const world_zon = try std.fs.cwd().readFileAllocOptions(gpa, "world.zon", 4096, 2048, .@"1", 0);
+    const args = try std.process.argsAlloc(gpa);
+    const world_file = if (args.len > 1) args[1] else "world.zon";
+
+    const world_zon = try std.fs.cwd().readFileAllocOptions(gpa, world_file, 1024 * 1024, 1 << 15, .@"1", 0);
     const world = try std.zon.parse.fromSlice(rt.World, gpa, @ptrCast(world_zon), null, .{});
     defer std.zon.parse.free(gpa, world);
     gpa.free(world_zon);
@@ -29,7 +25,7 @@ pub fn main() !void {
     const root = std.Progress.start(.{ .estimated_total_items = 1 });
     const scanlines = root.start("scanlines", camera.image_height);
 
-    camera.render(.{ .multi = world.objects }, pixels, scanlines);
+    camera.render(.{ .objects = world.objects }, pixels, scanlines);
     scanlines.end();
     root.end();
 

@@ -4,8 +4,11 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const exe_mod = b.createModule(.{
-        .root_source_file = b.path("src/main.zig"),
+    const gen_step = b.step("generator", "build the generator");
+    const build_generator = b.option(bool, "generator", "also build the world generator") orelse false;
+
+    const render_exe_mod = b.createModule(.{
+        .root_source_file = b.path("src/render.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -14,12 +17,27 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    exe_mod.addImport("qoi", zig_qoi.module("qoi"));
+    render_exe_mod.addImport("qoi", zig_qoi.module("qoi"));
 
-    const exe = b.addExecutable(.{
+    const render_exe = b.addExecutable(.{
         .name = "zrt",
-        .root_module = exe_mod,
+        .root_module = render_exe_mod,
     });
 
-    b.installArtifact(exe);
+    const gen_exe = b.addExecutable(.{
+        .name = "gen_world",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/gen_world.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    const install_gen = b.addInstallArtifact(gen_exe, .{});
+    gen_step.dependOn(&install_gen.step);
+
+    b.installArtifact(render_exe);
+    if (build_generator) {
+        b.installArtifact(gen_exe);
+    }
 }

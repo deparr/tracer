@@ -5,10 +5,25 @@ const Vec3 = math.Vec3;
 const Ray = math.Ray;
 const Color = math.Color;
 
+pub const Scene = struct {
+    objects: []Hittable,
+
+    pub fn hit(self: Scene, ray: *const Ray, range: math.Range) ?Hittable.HitRecord {
+        var record: ?Hittable.HitRecord = null;
+        var closest_range = range;
+        for (self.objects) |obj| {
+            if (obj.hit(ray, closest_range)) |obj_record| {
+                record = obj_record;
+                closest_range.max = obj_record.t;
+            }
+        }
+        return record;
+    }
+};
+
 pub const Hittable = union(enum) {
     // https://ziggit.dev/t/is-it-possible-to-use-non-exhaustive-enums-in-zon/13847/16
     sphere: struct { center: Point, radius: f64, mat: u32 = 0 },
-    multi: []const Hittable,
 
     pub const HitRecord = struct {
         point: Point = Point.zero,
@@ -51,17 +66,6 @@ pub const Hittable = union(enum) {
                 };
                 record.setFaceNormal(ray, &outward_normal);
 
-                return record;
-            },
-            .multi => |list| {
-                var record: ?HitRecord = null;
-                var closest_range = range;
-                for (list) |obj| {
-                    if (obj.hit(ray, closest_range)) |obj_record| {
-                        record = obj_record;
-                        closest_range.max = obj_record.t;
-                    }
-                }
                 return record;
             },
         }

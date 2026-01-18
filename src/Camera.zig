@@ -89,7 +89,7 @@ pub fn initOptions(opts: Options) Camera {
     };
 }
 
-pub fn render(self: *Camera, world: rt.Hittable, pixels: []u8, progress: std.Progress.Node) void {
+pub fn render(self: *Camera, world: rt.Scene, pixels: []u8, progress: std.Progress.Node) void {
     for (0..self.image_height) |j| {
         const row_offset = j * self.stride;
         for (0..self.image_width) |i| {
@@ -130,7 +130,7 @@ fn sampleDefocusDisk(self: *Camera) Point {
         .add(self.defocus_disk_v.scale(p.y));
 }
 
-fn rayColor(self: *Camera, ray: Ray, world: *const rt.Hittable, depth: u32) Color {
+fn rayColor(self: *Camera, ray: Ray, world: *const rt.Scene, depth: u32) Color {
     if (depth == 0) return Color.black;
 
     if (world.hit(&ray, .forward)) |rec| {
