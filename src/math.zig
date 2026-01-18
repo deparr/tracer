@@ -82,6 +82,18 @@ pub const Random = struct {
         else
             on_sphere.neg();
     }
+
+    pub fn next_vec3_in_unit_disk(self: *Random) Vec3 {
+        const iter_max = 1000;
+        var i: u32 = 0;
+        while (true and i < iter_max) : (i += 1) {
+            const p = Vec3{.x = self.next_f64_range(-1, 1), .y = self.next_f64_range(-1, 1) };
+            if (p.len2() < 1) {
+                return p;
+            }
+        }
+        @panic("failed to create a valid disk vec in 1000 iters");
+    }
 };
 
 pub const Vec3 = packed struct {

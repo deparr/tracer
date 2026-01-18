@@ -9,6 +9,8 @@ pub const Options = struct {
     look_from: Vec3 = .{},
     look_at: Vec3 = .{ .z = -1.0 },
     view_up: Vec3 = .{ .y = 1.0 },
+    defocus_angle: f64 = 0,
+    focus_dist: f64 = 10,
 };
 
 aspect_ratio: f64,
@@ -26,19 +28,21 @@ max_depth: u32,
 u: Vec3,
 v: Vec3,
 w: Vec3,
+defocus_angle: f64,
+defocus_disk_u: Vec3,
+defocus_disk_v: Vec3,
 materials: []const rt.Material,
 rng: math.Random,
 
-// todo if this needs more opts, create an options struct
 pub fn initOptions(opts: Options) Camera {
     const widthf: f64 = @floatFromInt(opts.image_width);
     const image_height: f64 = @max(1.0, widthf / opts.aspect_ratio);
 
     // viewport dimensions
-    const focal_length: f64 = opts.look_from.sub(opts.look_at).len();
+    // const focal_length: f64 = opts.look_from.sub(opts.look_at).len();
     const theta = math.deg_to_rad(opts.vfov);
     const h = @tan(theta / 2);
-    const viewport_height: f64 = 2.0 * h * focal_length;
+    const viewport_height: f64 = 2.0 * h * opts.focus_dist;
     const viewport_width = viewport_height * widthf / image_height;
 
     // basis vectors
@@ -55,9 +59,11 @@ pub fn initOptions(opts: Options) Camera {
     const pixel_delta_v = viewport_v.divScalar(image_height);
 
     var viewport_upper_left = opts.look_from
-        .sub(w.scale(focal_length))
+        .sub(w.scale(opts.focus_dist))
         .sub(viewport_u.scale(0.5))
         .sub(viewport_v.scale(0.5));
+
+    const defocus_radius = opts.focus_dist * @tan(math.deg_to_rad(opts.defocus_angle / 2));
 
     return .{
         .aspect_ratio = opts.aspect_ratio,
@@ -75,6 +81,9 @@ pub fn initOptions(opts: Options) Camera {
         .u = u,
         .v = v,
         .w = w,
+        .defocus_angle = opts.defocus_angle,
+        .defocus_disk_u = u.scale(defocus_radius),
+        .defocus_disk_v = v.scale(defocus_radius),
         .materials = &.{},
         .rng = .init(0xdeadcafe),
     };
@@ -108,7 +117,17 @@ fn getRay(self: *Camera, i_int: usize, j_int: usize) Ray {
         .add(self.pixel_delta_u.scale(i + offset.x))
         .add(self.pixel_delta_v.scale(j + offset.y));
 
-    return Ray{ .origin = self.center, .dir = pixel_sample.sub(self.center) };
+    const origin = if (self.defocus_angle <= 0) self.center else self.sampleDefocusDisk();
+    const direction = pixel_sample.sub(origin);
+
+    return Ray{ .origin = origin, .dir = direction };
+}
+
+fn sampleDefocusDisk(self: *Camera) Point {
+    const p = self.rng.next_vec3_in_unit_disk();
+    return self.center
+        .add(self.defocus_disk_u.scale(p.x))
+        .add(self.defocus_disk_v.scale(p.y));
 }
 
 fn rayColor(self: *Camera, ray: Ray, world: *const rt.Hittable, depth: u32) Color {
