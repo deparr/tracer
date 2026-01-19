@@ -4,9 +4,12 @@
     .minimum_zig_version = "0.15.2",
     .fingerprint = 0xcde93736bfbcb517,
     .dependencies = .{
+        // .zig_qoi = .{
+        //     .url = "git+https://github.com/deparr/zig-qoi.git#1285f27937b5d01f31899d2ad749d54e383448ef",
+        //     .hash = "zig_qoi-0.0.1-BJqtAIpQAAAEAhmiE7xT5AxtT10qNpRim37zYqditqCP",
+        // },
         .zig_qoi = .{
-            .url = "git+https://github.com/deparr/zig-qoi.git#1285f27937b5d01f31899d2ad749d54e383448ef",
-            .hash = "zig_qoi-0.0.1-BJqtAIpQAAAEAhmiE7xT5AxtT10qNpRim37zYqditqCP",
+            .path = "../zig-qoi/",
         },
     },
     .paths = .{""},

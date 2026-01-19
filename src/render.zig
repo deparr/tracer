@@ -10,6 +10,7 @@ pub fn main() !void {
 
     const args = try std.process.argsAlloc(gpa);
     const world_file = if (args.len > 1) args[1] else "world.zon";
+    defer std.process.argsFree(gpa, args);
 
     const world_zon = try std.fs.cwd().readFileAllocOptions(gpa, world_file, 1024 * 1024, 1 << 15, .@"1", 0);
     const world = try std.zon.parse.fromSlice(rt.World, gpa, @ptrCast(world_zon), null, .{});
@@ -29,18 +30,14 @@ pub fn main() !void {
     scanlines.end();
     root.end();
 
-    // really need a streaming api on zig-qoi
-    const qoi_img = try qoi.encode(gpa, pixels, .{
+    var io_buf: [1024]u8 = undefined;
+    var stdout = std.fs.File.stdout();
+    var writer = stdout.writer(&io_buf);
+
+    try qoi.encode(&writer.interface, pixels, .{
         .width = camera.image_width,
         .height = camera.image_height,
         .channels = .rgb,
         .colorspace = .srgb,
     });
-    defer gpa.free(qoi_img);
-
-    var io_buf: [1024]u8 = undefined;
-    var stdout = std.fs.File.stdout();
-    var writer = stdout.writer(&io_buf);
-    try writer.interface.writeAll(qoi_img);
-    try writer.interface.flush();
 }
