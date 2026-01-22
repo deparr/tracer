@@ -5,7 +5,8 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const gen_step = b.step("generator", "build the generator");
-    const build_generator = b.option(bool, "generator", "also build the world generator") orelse false;
+    const tracer_step = b.step("tracer", "build the ray tracer");
+    b.default_step = tracer_step;
 
     const render_exe_mod = b.createModule(.{
         .root_source_file = b.path("src/render.zig"),
@@ -36,8 +37,6 @@ pub fn build(b: *std.Build) void {
     const install_gen = b.addInstallArtifact(gen_exe, .{});
     gen_step.dependOn(&install_gen.step);
 
-    b.installArtifact(render_exe);
-    if (build_generator) {
-        b.installArtifact(gen_exe);
-    }
+    const install_tracer = b.addInstallArtifact(render_exe, .{});
+    tracer_step.dependOn(&install_tracer.step);
 }
