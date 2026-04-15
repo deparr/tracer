@@ -3,13 +3,14 @@ const rt = @import("rt.zig");
 const math = @import("math.zig");
 const CameraOptions = @import("Camera.zig").Options;
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     const gpa = std.heap.smp_allocator;
 
-    const args = try std.process.argsAlloc(gpa);
+    var args = try init.minimal.args.iterateAllocator(gpa);
     var seed: u32 = 0xba11dead;
-    if (args.len > 1)
-        seed = std.fmt.parseInt(u32, args[0], 0) catch seed;
+    _ = args.skip();
+    if (args.next()) |arg|
+        seed = std.fmt.parseInt(u32, arg, 0) catch seed;
 
     const camera_options = CameraOptions{
         .image_width = 1920,
@@ -124,7 +125,7 @@ pub fn main() !void {
     };
 
     var io_buf: [2048]u8 = undefined;
-    var stdout = std.fs.File.stdout().writer(&io_buf);
+    var stdout = std.Io.File.stdout().writer(init.io, &io_buf);
     try std.zon.stringify.serialize(
         world,
         .{ .emit_default_optional_fields = false },
