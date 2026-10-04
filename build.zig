@@ -14,12 +14,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const zig_qoi = b.dependency("zig_qoi", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    render_exe_mod.addImport("qoi", zig_qoi.module("qoi"));
-
     const render_exe = b.addExecutable(.{
         .name = "zrt",
         .root_module = render_exe_mod,

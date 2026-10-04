@@ -1,5 +1,5 @@
 const std = @import("std");
-const qoi = @import("qoi");
+const png = @import("png.zig");
 const Camera = @import("Camera.zig");
 const rt = @import("rt.zig");
 
@@ -11,8 +11,14 @@ pub fn main(init: std.process.Init) !void {
     const world_file = if (args.len > 1) args[1] else "world.zon";
 
     const world_zon = try std.Io.Dir.cwd().readFileAllocOptions(io, world_file, gpa, .unlimited, .@"1", 0);
-    const world = try std.zon.parse.fromSliceAlloc(rt.World, gpa, @ptrCast(world_zon), null, .{});
-    defer std.zon.parse.free(gpa, world);
+    var zon_diag = std.zon.parse.Diagnostics{ .errors = &.{} };
+    const world = try std.zon.parse.fromSlice(rt.World, .{
+        .gpa = gpa,
+        .arena = init.arena.allocator(),
+        .source = @ptrCast(world_zon),
+        .diagnostics = &zon_diag,
+        .ignore_unknown_fields = true,
+    });
     gpa.free(world_zon);
 
     var camera = Camera.initOptions(world.camera_options);
@@ -29,13 +35,15 @@ pub fn main(init: std.process.Init) !void {
     root.end();
 
     var io_buf: [1024]u8 = undefined;
-    var stdout = std.Io.File.stdout();
-    var writer = stdout.writer(io, &io_buf);
+    var outfile = blk: {
+        var stdout = std.Io.File.stdout();
+        if (!(stdout.isTty(io) catch true))
+            break :blk stdout;
 
-    try qoi.encode(&writer.interface, pixels, .{
-        .width = camera.image_width,
-        .height = camera.image_height,
-        .channels = .rgb,
-        .colorspace = .srgb,
-    });
+        try stdout.writeStreamingAll(io, "stdout is a tty, writing img data to './render.png' instead");
+        break :blk try std.Io.Dir.cwd().openFile(io, "render.png", .{ .mode = .write_only });
+    };
+    
+    var writer = outfile.writer(io, &io_buf);
+    try png.encodeStream(&writer.interface, pixels, camera.image_width, camera.image_height);
 }
